@@ -489,47 +489,11 @@ func (ko *Koanf) StringsMap(path string) map[string][]string {
 
 	switch mp := o.(type) {
 	case map[string][]string:
-		out = make(map[string][]string, len(mp))
-		for k, v := range mp {
-			out[k] = make([]string, 0, len(v))
-			for _, s := range v {
-				out[k] = append(out[k], s)
-			}
-		}
+		out = mapStringSlice(mp)
 	case map[string][]interface{}:
-		out = make(map[string][]string, len(mp))
-		for k, v := range mp {
-			for _, v := range v {
-				switch sv := v.(type) {
-				case string:
-					out[k] = append(out[k], sv)
-				default:
-					return map[string][]string{}
-				}
-			}
-		}
+		out = mapInterfaceSlice(mp)
 	case map[string]interface{}:
-		out = make(map[string][]string, len(mp))
-		for k, v := range mp {
-			switch s := v.(type) {
-			case []string:
-				for _, v := range s {
-					out[k] = append(out[k], v)
-				}
-			case []interface{}:
-				for _, v := range s {
-					switch sv := v.(type) {
-					case string:
-						out[k] = append(out[k], sv)
-					default:
-						return map[string][]string{}
-					}
-				}
-			default:
-				// There's a non []interface type. Return.
-				return map[string][]string{}
-			}
-		}
+		out = mapInterface(mp)
 	}
 
 	return out
@@ -651,4 +615,57 @@ func (ko *Koanf) MustBoolMap(path string) map[string]bool {
 		panic(fmt.Sprintf("invalid value: %s=%v", path, val))
 	}
 	return val
+}
+
+// mapStringSlice returns the map[string][]string value for a given map[string][]string
+// or an empty map[string][]string if the value is not a valid strings map.
+func mapStringSlice(mp map[string][]string) (out map[string][]string) {
+	out = make(map[string][]string, len(mp))
+	for k, v := range mp {
+		out[k] = make([]string, 0, len(v))
+		out[k] = append(out[k], v...)
+	}
+	return
+}
+
+// mapInterfaceSlice returns the map[string][]string value for a given map[string][]interface{}
+// or an empty map[string][]string if the value is not a valid strings map.
+func mapInterfaceSlice(mp map[string][]interface{}) (out map[string][]string) {
+	out = make(map[string][]string, len(mp))
+	for k, v := range mp {
+		for _, v := range v {
+			switch sv := v.(type) {
+			case string:
+				out[k] = append(out[k], sv)
+			default:
+				return map[string][]string{}
+			}
+		}
+	}
+	return
+}
+
+// mapInterface returns the map[string][]string value for a given map[string]interface{}
+// or an empty map[string][]string if the value is not a valid strings map.
+func mapInterface(mp map[string]interface{}) (out map[string][]string) {
+	out = make(map[string][]string, len(mp))
+	for k, v := range mp {
+		switch s := v.(type) {
+		case []string:
+			out[k] = append(out[k], s...)
+		case []interface{}:
+			for _, v := range s {
+				switch sv := v.(type) {
+				case string:
+					out[k] = append(out[k], sv)
+				default:
+					return map[string][]string{}
+				}
+			}
+		default:
+			// There's a non []interface type. Return.
+			return map[string][]string{}
+		}
+	}
+	return
 }
